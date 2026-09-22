@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const articleBodyTextarea = document.getElementById('article-body');
     const toolbar = document.getElementById('editor-toolbar');
     const trendingList = document.getElementById('trending-list');
+    const radarTopicSelect = document.getElementById('radar-topic-select');
     const btnRefreshRadar = document.getElementById('btn-refresh-radar');
     const btnGenerateAI = document.getElementById('btn-generate-ai');
     
@@ -197,9 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!trendingList) return;
 
         if (btnRefreshRadar) btnRefreshRadar.textContent = '🔄 Buscando Feeds RSS...';
+        const topicValue = radarTopicSelect ? radarTopicSelect.value : 'all';
 
         try {
-            const response = await fetch('api/trends.php');
+            const response = await fetch('api/trends.php?topic=' + topicValue);
             const data = await response.json();
 
             if (data.success && data.trends && data.trends.length > 0) {
@@ -256,6 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnRefreshRadar) {
         btnRefreshRadar.addEventListener('click', loadRssRadarTrends);
+    }
+    
+    if (radarTopicSelect) {
+        radarTopicSelect.addEventListener('change', () => {
+            trendingList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px 0; font-size: 13px;">📡 Carregando radar...</div>';
+            loadRssRadarTrends();
+        });
     }
 
 

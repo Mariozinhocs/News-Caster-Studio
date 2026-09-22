@@ -19,3 +19,5 @@
 
 ---
 *Nota: Este projeto funciona como um Copiloto Jornalista para a reda√ß√£o, permitindo cria√ß√£o de drafts e social media automatizada.*
+
+- Sess„o Atualizada (22/Set/2026): O servidor FTP correto do News-Caster Studio agora È `ftp://noticiabare.com/studio/`. O script antigo em Marcello/01 foi invalidado. Um novo script `deploy-production.ps1` foi criado na raiz do repositÛrio News-Caster Studio para realizar o upload.

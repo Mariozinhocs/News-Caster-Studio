@@ -1,29 +1,43 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
+$requestedTopic = isset($_GET['topic']) ? trim(mb_strtolower($_GET['topic'])) : 'all';
+
 // Feeds RSS de Notícias
-$rssFeeds = [
+$allRssFeeds = [
     [
         'category' => 'Amazonas',
+        'filter'   => 'amazonas',
         'source'   => 'G1 AM',
         'url'      => 'https://g1.globo.com/rss/g1/am/amazonas/'
     ],
     [
         'category' => 'Manaus & AM',
+        'filter'   => 'amazonas',
         'source'   => 'Google News AM',
         'url'      => 'https://news.google.com/rss/search?q=Manaus+OR+Amazonas+OR+David+Almeida&hl=pt-BR&gl=BR&ceid=BR:pt-419'
     ],
     [
         'category' => 'Política',
+        'filter'   => 'politica',
         'source'   => 'Google News Política',
         'url'      => 'https://news.google.com/rss/headlines/section/topic/POLITICS?hl=pt-BR&gl=BR&ceid=BR:pt-419'
     ],
     [
         'category' => 'Brasil',
+        'filter'   => 'brasil',
         'source'   => 'Agência Brasil',
         'url'      => 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml'
     ]
 ];
+
+if ($requestedTopic !== 'all' && $requestedTopic !== '') {
+    $rssFeeds = array_filter($allRssFeeds, function($feed) use ($requestedTopic) {
+        return $feed['filter'] === $requestedTopic;
+    });
+} else {
+    $rssFeeds = $allRssFeeds;
+}
 
 $items = [];
 $seenTitles = [];
