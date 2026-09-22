@@ -62,6 +62,9 @@ if (empty($url) && !empty($prompt)) {
 if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL)) {
     $html = fetchUrlContent($url);
     if (!empty($html)) {
+        // Limpar blocos de script e style antes de extrair qualquer texto
+        $html = preg_replace('/<(script|style)\b[^>]*>(.*?)<\/\1>/is', '', $html);
+
         if (preg_match('/<title>(.*?)<\/title>/is', $html, $m)) {
             $scrapedTitle = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, 'UTF-8'));
             $scrapedTitle = preg_replace('/(\s*[\-\|]\s*.*)$/i', '', $scrapedTitle);

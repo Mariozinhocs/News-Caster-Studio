@@ -21,6 +21,7 @@ if (!$data) {
 $title = trim($data['title'] ?? '');
 $content = trim($data['content'] ?? '');
 $status = trim($data['status'] ?? 'draft');
+$category = isset($data['category']) ? (int)$data['category'] : 0;
 
 // Validar status permitido
 if (!in_array($status, ['draft', 'publish', 'pending'])) {
@@ -40,11 +41,17 @@ $appPassword = 'wYtzOmu06zaFsTi7tYg7NLZN';
 
 $authHeader = 'Basic ' . base64_encode($username . ':' . $appPassword);
 
-$postPayload = json_encode([
+$postPayloadData = [
     'title'   => $title,
     'content' => $content,
     'status'  => $status
-]);
+];
+
+if ($category > 0) {
+    $postPayloadData['categories'] = [$category];
+}
+
+$postPayload = json_encode($postPayloadData);
 
 // Realizar requisição HTTP
 if (function_exists('curl_init')) {

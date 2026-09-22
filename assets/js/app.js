@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Publicação
     const btnPublish = document.getElementById('btn-publish');
     const statusSelect = document.getElementById('post-status-select');
+    const categorySelect = document.getElementById('post-category-select');
     const statusMessage = document.getElementById('status-message');
     const destNoticiaBare = document.getElementById('dest-noticiabare');
 
@@ -350,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = articleTitleInput.value.trim();
             const content = articleBodyTextarea.value.trim();
             const status = statusSelect ? statusSelect.value : 'draft';
+            const category = categorySelect ? categorySelect.value : 0;
 
             if (!destNoticiaBare || !destNoticiaBare.checked) {
                 showStatus('Selecione pelo menos um destino para publicação (Notícia Baré).', 'error');
@@ -368,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('api/publish.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content, status })
+                    body: JSON.stringify({ title, content, status, category })
                 });
 
                 const data = await response.json();
@@ -406,6 +408,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadCategories() {
+        if (!categorySelect) return;
+        try {
+            const response = await fetch('api/categories.php');
+            const data = await response.json();
+            
+            if (data.success && data.categories) {
+                categorySelect.innerHTML = '<option value="0">Sem categoria / Padrão</option>';
+                data.categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    categorySelect.appendChild(option);
+                });
+            } else {
+                categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+            }
+        } catch (err) {
+            console.error('Erro ao buscar categorias:', err);
+            categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+        }
+    }
+
     // Inicializar social preview com conteúdo padrão
     updateSocialPreview();
+
+    // Carregar radar de pautas automaticamente na inicialização (Push dos RSS disponíveis)
+    loadRssRadarTrends();
+
+    // Carregar as categorias do portal
+    loadCategories();
 });
