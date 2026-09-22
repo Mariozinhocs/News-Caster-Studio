@@ -54,11 +54,30 @@ $responseData = json_decode($response, true);
 
 if ($httpCode >= 200 && $httpCode < 300 && is_array($responseData)) {
     $categories = [];
+    $ignoredKeywords = ['casino', 'lizaro', 'bruce-bet', 'winnita', 'bez-rubriki', 'uncategorized', 'millioner'];
+
     foreach ($responseData as $cat) {
         if (isset($cat['id']) && isset($cat['name'])) {
+            $name = html_entity_decode($cat['name'], ENT_QUOTES, 'UTF-8');
+            $slug = $cat['slug'] ?? strtolower($name);
+
+            // Ignorar categorias numéricas puras ou sem categoria padrão (ID 1)
+            if (is_numeric(trim($name))) continue;
+            if ($cat['id'] === 1) continue;
+
+            $isSpam = false;
+            foreach ($ignoredKeywords as $kw) {
+                if (stripos($slug, $kw) !== false || stripos($name, $kw) !== false) {
+                    $isSpam = true;
+                    break;
+                }
+            }
+            if ($isSpam) continue;
+
             $categories[] = [
-                'id' => $cat['id'],
-                'name' => html_entity_decode($cat['name'], ENT_QUOTES, 'UTF-8')
+                'id'   => $cat['id'],
+                'name' => $name,
+                'slug' => $slug
             ];
         }
     }
@@ -68,7 +87,7 @@ if ($httpCode >= 200 && $httpCode < 300 && is_array($responseData)) {
     });
 
     echo json_encode([
-        'success' => true,
+        'success'    => true,
         'categories' => $categories
     ]);
 } else {

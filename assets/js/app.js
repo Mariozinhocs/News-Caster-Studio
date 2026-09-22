@@ -418,25 +418,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadCategories() {
-        if (!categorySelect) return;
+        if (!categorySelect && !radarTopicSelect) return;
         try {
             const response = await fetch('api/categories.php');
             const data = await response.json();
             
             if (data.success && data.categories) {
-                categorySelect.innerHTML = '<option value="0">Sem categoria / Padrão</option>';
+                if (categorySelect) {
+                    categorySelect.innerHTML = '<option value="0">Sem categoria / Padrão</option>';
+                }
+                if (radarTopicSelect) {
+                    radarTopicSelect.innerHTML = '<option value="all" selected>Todos os Tópicos / Categorias</option>';
+                }
+
                 data.categories.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.id;
-                    option.textContent = cat.name;
-                    categorySelect.appendChild(option);
+                    // Seletor de publicação no WordPress
+                    if (categorySelect) {
+                        const option = document.createElement('option');
+                        option.value = cat.id;
+                        option.textContent = cat.name;
+                        categorySelect.appendChild(option);
+                    }
+
+                    // Seletor do Radar de Pautas (Tópicos baseados nas categorias do portal)
+                    if (radarTopicSelect) {
+                        const topicOption = document.createElement('option');
+                        topicOption.value = cat.slug || cat.name.toLowerCase();
+                        topicOption.textContent = cat.name;
+                        radarTopicSelect.appendChild(topicOption);
+                    }
                 });
             } else {
-                categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+                if (categorySelect) categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+                if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
             }
         } catch (err) {
             console.error('Erro ao buscar categorias:', err);
-            categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+            if (categorySelect) categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
+            if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
         }
     }
 
