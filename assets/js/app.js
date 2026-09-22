@@ -262,7 +262,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (radarTopicSelect) {
         radarTopicSelect.addEventListener('change', () => {
-            trendingList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px 0; font-size: 13px;">📡 Carregando radar...</div>';
+            // Sincronizar automaticamente a categoria de publicação no WordPress
+            const selectedOpt = radarTopicSelect.options[radarTopicSelect.selectedIndex];
+            const catId = selectedOpt ? selectedOpt.getAttribute('data-category-id') : '0';
+            if (categorySelect && catId !== null) {
+                categorySelect.value = catId;
+            }
+
+            trendingList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px 0; font-size: 13px;">🔍 Carregando radar...</div>';
             loadRssRadarTrends();
         });
     }
@@ -428,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     categorySelect.innerHTML = '<option value="0">Sem categoria / Padrão</option>';
                 }
                 if (radarTopicSelect) {
-                    radarTopicSelect.innerHTML = '<option value="all" selected>Todos os Tópicos / Categorias</option>';
+                    radarTopicSelect.innerHTML = '<option value="all" data-category-id="0" selected>Todas as Categorias (Todos os Tópicos)</option>';
                 }
 
                 data.categories.forEach(cat => {
@@ -440,22 +447,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         categorySelect.appendChild(option);
                     }
 
-                    // Seletor do Radar de Pautas (Tópicos baseados nas categorias do portal)
+                    // Seletor do Radar de Pautas (guarda a categoria de publicação correspondente)
                     if (radarTopicSelect) {
                         const topicOption = document.createElement('option');
                         topicOption.value = cat.slug || cat.name.toLowerCase();
+                        topicOption.setAttribute('data-category-id', cat.id);
                         topicOption.textContent = cat.name;
                         radarTopicSelect.appendChild(topicOption);
                     }
                 });
             } else {
                 if (categorySelect) categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
-                if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
+                if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all" data-category-id="0">Todas as Categorias</option>';
             }
         } catch (err) {
             console.error('Erro ao buscar categorias:', err);
             if (categorySelect) categorySelect.innerHTML = '<option value="0">Erro ao carregar categorias</option>';
-            if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
+            if (radarTopicSelect) radarTopicSelect.innerHTML = '<option value="all" data-category-id="0">Todas as Categorias</option>';
         }
     }
 
