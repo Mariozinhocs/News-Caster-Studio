@@ -38,6 +38,7 @@ function fetchUrlContent($targetUrl) {
 
 $scrapedTitle = '';
 $scrapedParagraphs = [];
+$scrapedImage = '';
 
 // Se não tiver URL direta mas tiver Prompt, buscar notícia real relacionada no Google News RSS
 if (empty($url) && !empty($prompt)) {
@@ -62,14 +63,21 @@ if (empty($url) && !empty($prompt)) {
 if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL)) {
     $html = fetchUrlContent($url);
     if (!empty($html)) {
-        // Limpar blocos de script e style antes de extrair qualquer texto
-        $html = preg_replace('/<(script|style)\b[^>]*>(.*?)<\/\1>/is', '', $html);
+        // Extrair Og:Image / Twitter Image
+        if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $mImg)) {
+            $scrapedImage = trim($mImg[1]);
+        } elseif (preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $mImg)) {
+            $scrapedImage = trim($mImg[1]);
+        }
 
-        if (preg_match('/<title>(.*?)<\/title>/is', $html, $m)) {
+        // Limpar blocos de script e style antes de extrair qualquer texto
+        $htmlClean = preg_replace('/<(script|style)\b[^>]*>(.*?)<\/\1>/is', '', $html);
+
+        if (preg_match('/<title>(.*?)<\/title>/is', $htmlClean, $m)) {
             $scrapedTitle = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, 'UTF-8'));
             $scrapedTitle = preg_replace('/(\s*[\-\|]\s*.*)$/i', '', $scrapedTitle);
         }
-        preg_match_all('/<p[^>]*>(.*?)<\/p>/is', $html, $matches);
+        preg_match_all('/<p[^>]*>(.*?)<\/p>/is', $htmlClean, $matches);
         if (!empty($matches[1])) {
             foreach ($matches[1] as $pText) {
                 $cleanP = trim(html_entity_decode(strip_tags($pText), ENT_QUOTES, 'UTF-8'));
@@ -132,9 +140,9 @@ $formattedContent = implode("\n\n", $bodyContent);
 
 // Montar Legenda do Instagram
 $leadExcerpt = !empty($scrapedParagraphs) ? $scrapedParagraphs[0] : $prompt;
-$igCaption = "📢 <strong>" . htmlspecialchars($headline) . "</strong>\n\n" .
+$igCaption = "📍 <strong>" . htmlspecialchars($headline) . "</strong>\n\n" .
              mb_substr($leadExcerpt, 0, 180) . "...\n\n" .
-             "👉 Confira a matéria completa e todos os detalhes no portal Notícia Baré! Link na bio. 🗞️✨";
+             "🔗 Confira a matéria completa e todos os detalhes no portal Notícia Baré! Link na bio. 📲✨";
 
 // Gerar Hashtags Inteligentes
 $words = preg_split('/\s+/', $headline);
@@ -153,6 +161,7 @@ echo json_encode([
     'success'           => true,
     'title'             => $headline,
     'content'           => $formattedContent,
+    'image_url'         => $scrapedImage,
     'instagram_caption' => $igCaption,
     'hashtags'          => implode(' ', $tags),
     'extracted_facts'   => count($scrapedParagraphs) > 0

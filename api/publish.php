@@ -22,6 +22,7 @@ $title = trim($data['title'] ?? '');
 $content = trim($data['content'] ?? '');
 $status = trim($data['status'] ?? 'draft');
 $category = isset($data['category']) ? (int)$data['category'] : 0;
+$imageUrl = trim($data['image_url'] ?? '');
 
 // Validar status permitido
 if (!in_array($status, ['draft', 'publish', 'pending'])) {
@@ -36,11 +37,57 @@ if (empty($title) || empty($content)) {
 
 // Credenciais e URL da API do WordPress
 $wpApiUrl = 'https://noticiabare.com/wp-json/wp/v2/posts';
+$wpMediaUrl = 'https://noticiabare.com/wp-json/wp/v2/media';
 $username = 'mariozinhocs@gmail.com';
 $appPassword = 'wYtzOmu06zaFsTi7tYg7NLZN';
 
 $authHeader = 'Basic ' . base64_encode($username . ':' . $appPassword);
 
+// 1. Upload da Imagem de Destaque para o WordPress Media se houver URL válida
+$featuredMediaId = 0;
+if (!empty($imageUrl) && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+    $imgBinary = null;
+    if (function_exists('curl_init')) {
+        $chImg = curl_init($imageUrl);
+        curl_setopt($chImg, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($chImg, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($chImg, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+        curl_setopt($chImg, CURLOPT_TIMEOUT, 10);
+        curl_setopt($chImg, CURLOPT_SSL_VERIFYPEER, false);
+        $imgBinary = curl_exec($chImg);
+        curl_close($chImg);
+    } else {
+        $imgBinary = @file_get_contents($imageUrl);
+    }
+
+    if (!empty($imgBinary)) {
+        $filename = 'ncs_img_' . time() . '.jpg';
+
+        if (function_exists('curl_init')) {
+            $chMedia = curl_init($wpMediaUrl);
+            curl_setopt($chMedia, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chMedia, CURLOPT_POST, true);
+            curl_setopt($chMedia, CURLOPT_POSTFIELDS, $imgBinary);
+            curl_setopt($chMedia, CURLOPT_HTTPHEADER, [
+                'Content-Type: image/jpeg',
+                'Content-Disposition: attachment; filename="' . $filename . '"',
+                'Authorization: ' . $authHeader
+            ]);
+            curl_setopt($chMedia, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($chMedia, CURLOPT_TIMEOUT, 15);
+
+            $mediaResp = curl_exec($chMedia);
+            curl_close($chMedia);
+
+            $mediaData = json_decode($mediaResp, true);
+            if (isset($mediaData['id'])) {
+                $featuredMediaId = (int)$mediaData['id'];
+            }
+        }
+    }
+}
+
+// 2. Montar Payload do Post no WordPress
 $postPayloadData = [
     'title'   => $title,
     'content' => $content,
@@ -51,9 +98,13 @@ if ($category > 0) {
     $postPayloadData['categories'] = [$category];
 }
 
+if ($featuredMediaId > 0) {
+    $postPayloadData['featured_media'] = $featuredMediaId;
+}
+
 $postPayload = json_encode($postPayloadData);
 
-// Realizar requisição HTTP
+// 3. Realizar requisição HTTP para Criar o Post
 if (function_exists('curl_init')) {
     $ch = curl_init($wpApiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -99,11 +150,12 @@ $responseData = json_decode($response, true);
 
 if ($httpCode >= 200 && $httpCode < 300 && isset($responseData['id'])) {
     echo json_encode([
-        'success'  => true,
-        'post_id'  => $responseData['id'],
-        'link'     => $responseData['link'] ?? null,
-        'status'   => $responseData['status'] ?? $status,
-        'message'  => 'Matéria enviada com sucesso!'
+        'success'         => true,
+        'post_id'         => $responseData['id'],
+        'link'            => $responseData['link'] ?? null,
+        'status'          => $responseData['status'] ?? $status,
+        'featured_media'  => $featuredMediaId,
+        'message'         => 'Matéria enviada com sucesso!'
     ]);
 } else {
     $errMsg = $responseData['message'] ?? ('HTTP Status ' . $httpCode);

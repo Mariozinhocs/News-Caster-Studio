@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPublish = document.getElementById('btn-publish');
     const statusSelect = document.getElementById('post-status-select');
     const categorySelect = document.getElementById('post-category-select');
+    const postImageUrlInput = document.getElementById('post-image-url');
     const statusMessage = document.getElementById('status-message');
     const destNoticiaBare = document.getElementById('dest-noticiabare');
 
@@ -106,9 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     const igImagePreview = document.getElementById('ig-image-preview');
 
-    function renderInstagramCoverImage(titleText) {
+    function renderInstagramCoverImage(titleText, imageUrl) {
         if (!igImagePreview) return;
         
+        if (imageUrl && imageUrl.trim().length > 10) {
+            igImagePreview.innerHTML = `<img src="${imageUrl.trim()}" style="width:100%; height:100%; object-fit:cover; border-radius:12px; display:block;" alt="Capa da Matéria">`;
+            return;
+        }
+
         const displayTitle = titleText || 'Notícia Baré';
         const truncatedTitle = displayTitle.length > 70 ? displayTitle.substring(0, 67) + '...' : displayTitle;
 
@@ -155,8 +161,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSocialPreview() {
         const title = articleTitleInput.value.trim();
         const body = articleBodyTextarea.value.trim();
+        const imgUrl = postImageUrlInput ? postImageUrlInput.value.trim() : '';
 
-        renderInstagramCoverImage(title);
+        renderInstagramCoverImage(title, imgUrl);
 
         if (!title && !body) {
             igCaptionText.innerHTML = '<strong>noticiabare</strong> Digite um título ou matéria para visualizar a legenda aqui.';
@@ -167,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const paragraphs = cleanBody.split('\n').filter(p => p.trim() !== '');
         const firstParagraph = paragraphs.length > 0 ? paragraphs[0] : '';
 
-        igCaptionText.innerHTML = `<strong>noticiabare</strong> 📢 <strong>${title}</strong><br><br>${firstParagraph.substring(0, 180)}${firstParagraph.length > 180 ? '...' : ''} 🗞️<br><br>👉 Confira a matéria completa no link da bio!`;
+        igCaptionText.innerHTML = `<strong>noticiabare</strong> 📍 <strong>${title}</strong><br><br>${firstParagraph.substring(0, 180)}${firstParagraph.length > 180 ? '...' : ''} 📲✨<br><br>🔗 Confira a matéria completa no link da bio!`;
 
         const words = title.split(' ')
             .map(w => w.replace(/[^a-zA-Z0-9À-ÿ]/g, ''))
@@ -335,6 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     if (data.title) articleTitleInput.value = data.title;
                     if (data.content) articleBodyTextarea.value = data.content;
+                    if (data.image_url && postImageUrlInput) {
+                        postImageUrlInput.value = data.image_url;
+                    }
                     
                     if (data.instagram_caption) {
                         igCaptionText.innerHTML = data.instagram_caption.replace(/\n/g, '<br>');
@@ -343,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         igTagsText.textContent = data.hashtags;
                     }
 
+                    updateSocialPreview();
                     closeAiModal();
                     showStatus('✨ Matéria gerada com sucesso pela IA! Pronta para revisão.', 'success', 4000);
                 } else {
@@ -368,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = articleBodyTextarea.value.trim();
             const status = statusSelect ? statusSelect.value : 'draft';
             const category = categorySelect ? categorySelect.value : 0;
+            const image_url = postImageUrlInput ? postImageUrlInput.value.trim() : '';
 
             if (!destNoticiaBare || !destNoticiaBare.checked) {
                 showStatus('Selecione pelo menos um destino para publicação (Notícia Baré).', 'error');
@@ -379,21 +391,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showStatus('🚀 Enviando matéria para o Notícia Baré...', 'loading');
+            showStatus('🚀 Enviando matéria e imagem para o Notícia Baré...', 'loading');
             btnPublish.disabled = true;
 
             try {
                 const response = await fetch('api/publish.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content, status, category })
+                    body: JSON.stringify({ title, content, status, category, image_url })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
                     const statusLabel = status === 'publish' ? 'Publicado!' : 'Salvo como Rascunho!';
-                    let msg = `✅ ${statusLabel} (ID: ${data.post_id})`;
+                    let msg = `✨ ${statusLabel} (ID: ${data.post_id})`;
+                    if (data.featured_media > 0) {
+                        msg += ` [Imagem de Destaque Anexada]`;
+                    }
                     if (data.link) {
                         msg += ` - <a href="${data.link}" target="_blank" style="color:#60A5FA; text-decoration:underline;">Ver Matéria</a>`;
                     }
@@ -408,6 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnPublish.disabled = false;
             }
         });
+    }
+
+    if (postImageUrlInput) {
+        postImageUrlInput.addEventListener('input', updateSocialPreview);
     }
 
     // Helper de mensagens de status
